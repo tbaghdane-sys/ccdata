@@ -1,0 +1,184 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<div id="root" style="max-width:420px;font-family:var(--font-sans);"></div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+
+    const collegeCode = params.get("code");
+
+    console.log(collegeCode);
+const CATS = [
+  { key: "OPEN", label: "OPEN" },
+  { key: "OBC", label: "OBC" },
+  { key: "SC", label: "SC" },
+  { key: "ST", label: "ST" },
+  { key: "EWS", label: "EWS" },
+  { key: "TFWS", label: "TFWS" }
+];
+const ROUNDS = [ { key: "r1", label: "Round 1" }, { key: "r2", label: "Round 2" }, { key: "r3", label: "Round 3" } ];
+
+function emptyCutoffs(){
+  const o = {};
+  ROUNDS.forEach(r => { o[r.key] = {}; CATS.forEach(c => o[r.key][c.key] = ""); });
+  return o;
+}
+
+const state = {
+  name: "", dteCode: "", city: "", autonomy: "",
+  branches: [ { name: "", cutoffs: emptyCutoffs() } ],
+  round: "r1",
+  activeBranch: 0,
+  fees: "", placement: ""
+};
+
+function textInput(field, placeholder, style){
+  return `<input data-field="${field}" value="${state[field]}" placeholder="${placeholder}" style="${style}" />`;
+}
+
+function render(){
+  const root = document.getElementById("root");
+  const branchTabs = state.branches.map((b, i) => `
+    <button data-branchsel="${i}" style="
+      font-size:12.5px; padding:5px 11px; border-radius:999px;
+      border:0.5px solid ${i === state.activeBranch ? 'var(--border-accent)' : 'var(--border)'};
+      background:${i === state.activeBranch ? 'var(--bg-accent)' : 'transparent'};
+      color:${i === state.activeBranch ? 'var(--text-accent)' : 'var(--text-secondary)'};
+      cursor:pointer; white-space:nowrap;">${b.name || 'Branch ' + (i+1)}</button>
+  `).join("");
+
+  const addBranchBtn = `<button id="add-branch" style="
+    font-size:12.5px; padding:5px 11px; border-radius:999px; border:0.5px dashed var(--border-strong);
+    background:transparent; color:var(--text-muted); cursor:pointer; white-space:nowrap;">
+    <i class="ti ti-plus" style="font-size:13px; vertical-align:-1px;" aria-hidden="true"></i> Branch</button>`;
+
+  const removeBranchBtn = state.branches.length > 1 ? `<button id="remove-branch" style="
+    font-size:11.5px; padding:5px 9px; border-radius:999px; border:0.5px solid var(--border);
+    background:transparent; color:var(--text-danger); cursor:pointer;">
+    <i class="ti ti-trash" style="font-size:13px; vertical-align:-1px;" aria-hidden="true"></i></button>` : '';
+
+  const roundBtns = ROUNDS.map(r => `
+    <button data-roundsel="${r.key}" style="
+      flex:1; font-family:var(--font-mono); font-size:12px; padding:5px 0; border-radius:var(--radius);
+      border:0.5px solid ${r.key === state.round ? 'var(--border-strong)' : 'var(--border)'};
+      background:${r.key === state.round ? 'var(--surface-1)' : 'transparent'};
+      color:${r.key === state.round ? 'var(--text-primary)' : 'var(--text-muted)'};
+      font-weight:${r.key === state.round ? '500' : '400'};
+      cursor:pointer;">${r.label}</button>
+  `).join("");
+
+  const branch = state.branches[state.activeBranch];
+  const cutoffs = branch.cutoffs[state.round];
+
+  const catRows = CATS.map(c => {
+    const isOpen = c.key === "OPEN";
+    return `
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:${isOpen ? '10px 12px' : '6px 0'};
+      ${isOpen ? "background:var(--bg-warning); border-radius:var(--radius); margin-bottom:8px;" : "border-bottom:0.5px solid var(--border);"}">
+      <span style="font-size:${isOpen ? '12.5px' : '13px'}; font-weight:${isOpen ? '500' : '400'};
+        color:${isOpen ? 'var(--text-warning)' : 'var(--text-secondary)'};">${c.label}${isOpen ? ' cutoff' : ''}</span>
+      <input data-cutoff="${c.key}" value="${cutoffs[c.key]}" placeholder="0.00" inputmode="decimal"
+        style="width:64px; text-align:right; font-family:var(--font-mono); font-size:${isOpen ? '16px' : '13px'};
+        font-weight:${isOpen ? '500' : '400'}; color:${isOpen ? 'var(--text-warning)' : 'var(--text-primary)'};
+        border:none; background:transparent; padding:2px 4px;" />
+    </div>`;
+  }).join("");
+
+  root.innerHTML = `
+  <div style="background:var(--surface-2); border:0.5px solid var(--border); border-radius:12px; padding:1rem 1.15rem;">
+
+    <div style="margin-bottom:12px;">
+      ${textInput('name', 'College name', 'font-family:\'Fraunces\',serif; font-weight:500; font-size:17px; width:100%; border:none; background:transparent; color:var(--text-primary); padding:2px 0; margin-bottom:6px;')}
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        ${textInput('dteCode', 'DTE code', 'font-family:var(--font-mono); font-size:11.5px; color:var(--text-muted); border:none; background:transparent; width:70px; padding:1px 0;')}
+        <span style="font-size:11.5px; color:var(--text-muted);">·</span>
+        ${textInput('city', 'City / district', 'font-size:12px; color:var(--text-secondary); border:none; background:transparent; width:140px; padding:1px 0;')}
+      </div>
+      <div style="margin-top:6px;">
+        ${textInput('autonomy', 'Autonomy status (e.g. Government · Autonomous)', 'font-size:12px; border:0.5px solid var(--border); border-radius:999px; background:transparent; color:var(--text-secondary); padding:3px 10px; width:100%;')}
+      </div>
+    </div>
+
+    <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; margin-bottom:10px; align-items:center;">
+      ${branchTabs}${addBranchBtn}${removeBranchBtn}
+    </div>
+    <input data-field="branchname" value="${branch.name}" placeholder="Branch name (e.g. Computer Engineering)"
+      style="font-size:13px; width:100%; border:0.5px solid var(--border); border-radius:var(--radius); background:transparent; color:var(--text-primary); padding:6px 10px; margin-bottom:14px;" />
+
+    <div style="display:flex; gap:6px; margin-bottom:12px;">${roundBtns}</div>
+
+    <div style="margin-bottom:10px;">${catRows}</div>
+
+    <div style="display:flex; border-top:0.5px solid var(--border); padding-top:10px; gap:12px;">
+      <div style="flex:1;">
+        <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 3px;">Total fees</p>
+        <input data-field="fees" value="${state.fees}" placeholder="\u20B9 amount" inputmode="numeric"
+          style="font-family:var(--font-mono); font-size:14px; font-weight:500; border:none; background:transparent; color:var(--text-primary); width:100%; padding:0;" />
+      </div>
+      <div style="flex:1;">
+        <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 3px;">Avg placement</p>
+        <input data-field="placement" value="${state.placement}" placeholder="LPA" inputmode="decimal"
+          style="font-family:var(--font-mono); font-size:14px; font-weight:500; border:none; background:transparent; color:var(--text-success); width:100%; padding:0;" />
+      </div>
+    </div>
+    <br>
+    <button onclick="saveDetails()">Save Details</button>
+  </div>`;
+
+  root.querySelectorAll("input[data-field]").forEach(inp => {
+    inp.addEventListener("input", () => {
+      if (inp.dataset.field === "branchname") {
+        state.branches[state.activeBranch].name = inp.value;
+      } else {
+        state[inp.dataset.field] = inp.value;
+      }
+    });
+  });
+  root.querySelectorAll("input[data-cutoff]").forEach(inp => {
+    inp.addEventListener("input", () => {
+      state.branches[state.activeBranch].cutoffs[state.round][inp.dataset.cutoff] = inp.value;
+    });
+  });
+  root.querySelectorAll("button[data-branchsel]").forEach(btn => {
+    btn.addEventListener("click", () => { state.activeBranch = +btn.dataset.branchsel; render(); });
+  });
+  root.querySelectorAll("button[data-roundsel]").forEach(btn => {
+    btn.addEventListener("click", () => { state.round = btn.dataset.roundsel; render(); });
+  });
+  const addBtn = document.getElementById("add-branch");
+  if (addBtn) addBtn.addEventListener("click", () => {
+    state.branches.push({ name: "", cutoffs: emptyCutoffs() });
+    state.activeBranch = state.branches.length - 1;
+    render();
+  });
+  const removeBtn = document.getElementById("remove-branch");
+  if (removeBtn) removeBtn.addEventListener("click", () => {
+    state.branches.splice(state.activeBranch, 1);
+    state.activeBranch = Math.max(0, state.activeBranch - 1);
+    render();
+  });
+}
+function saveDetails() {
+
+    fetch("http://localhost:3000/saveDetails", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            collegeCode: collegeCode,
+            city: state.city,
+            autonomy: state.autonomy,
+            fees: state.fees,
+            placement: state.placement
+        })
+    })
+    .then(response => response.text())
+    .then(data => {
+        console.log(data);
+    });
+
+}
+render();
+</script>
